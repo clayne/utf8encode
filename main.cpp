@@ -31,6 +31,7 @@ fstream stream;
 char b = 0x00;
 int fileLength = 0;
 bool doneFile = false;
+int origFileLength;
 int pos = 1;
 
 int getNextBit() {
@@ -101,7 +102,9 @@ int main( int argv, char **argc ) {
 	if( flag == "-d" ) {
 		stream.seekg(0, stream.end);
         fileLength = stream.tellg();
+		origFileLength = fileLength;
         stream.seekg(0, stream.beg);
+
 		list<char> decoded;
 		char newByte = 0x00;
 		char newByteCount = 8;
@@ -124,13 +127,32 @@ int main( int argv, char **argc ) {
 				
 			}
 			
+			decoded.push_back(newByte);
+			
 			if( doneFile ) {
 				break;
 			}
 
-			decoded.push_back(newByte);
 		}
-	
+
+		if( origFileLength % 3 != 0 ) {
+			decoded.pop_back();
+			decoded.pop_back();
+
+			int realB = 0x00;
+			
+			stream.close();
+			stream.open( argc[2], ios::binary | ios::in );
+			stream.seekg(origFileLength-2,stream.beg);
+			char newB1 = stream.get();
+			char newB2 = stream.get();
+
+			realB |= (newB1 & 0x0F) << 4;
+			realB |= (newB2 & 0x3C) >> 2;
+
+			decoded.push_back(realB);
+		}
+
 		list<char>::iterator beg = decoded.begin();
 		list<char>::iterator end = decoded.end();
 		string outputFilename = string(argc[2]) + string(".decoded");
@@ -154,6 +176,7 @@ int main( int argv, char **argc ) {
 
 		stream.seekg(0, stream.end);
 		fileLength = stream.tellg();
+		origFileLength = fileLength;
 		stream.seekg(0, stream.beg);
 		
 		list<char> encoded;
@@ -162,11 +185,9 @@ int main( int argv, char **argc ) {
 		char newByte = 0;
 		char codePointCount = 1; //1 based
 		int newByteCount = 0;
-
+		bool encValid;
+		
 		while( 1 ) {
-			if( doneFile ) {
-				break;
-			}
 
 			if( codePointCount == 1 ) {
 				newByte = b1;
@@ -175,19 +196,28 @@ int main( int argv, char **argc ) {
 				newByte = bn;
 				newByteCount = 6;
 			}
-
+			
 			while( newByteCount != 0 ) {
 				int b = getNextBit();
 				
+				encValid = false;
 				if( doneFile ) {
 					break;
 				}
-				
+				encValid = true;
 				//Put b at newByte:newByteCount
 				newByte |= (b << (newByteCount-1));
 
 				newByteCount--;
 				
+			}
+			
+			if( encValid ) {	
+				encoded.push_back(newByte);
+			}
+			
+			if( doneFile ) {
+				break;
 			}
 			
 			if( codePointCount == 3 ) {
@@ -196,7 +226,17 @@ int main( int argv, char **argc ) {
 				codePointCount++;
 			}
 			
-			encoded.push_back(newByte);
+		}
+		
+		if( origFileLength % 2 != 0 ) {
+			int newB2 = encoded.back();
+			encoded.pop_back();
+			int newB1 = encoded.back();
+			encoded.pop_back();
+
+			newB1 &= ~(1 << 5); //Clear bit 6
+			encoded.push_back(newB1);
+			encoded.push_back(newB2);
 		}
 
 		list<char>::iterator beg = encoded.begin();
