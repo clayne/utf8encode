@@ -236,38 +236,15 @@ int main( int argv, char **argc ) {
 		}
 		
 		if( origFileLength % 2 != 0 ) {
-			
-			
-			if( origFileLength % 2 != 0 ) {
-				int newB2 = encoded.back();
-				encoded.pop_back();
-				int newB1 = encoded.back();
-				encoded.pop_back();
+			int newB2 = encoded.back();
+			encoded.pop_back();
+			int newB1 = encoded.back();
+			encoded.pop_back();
 
-				newB1 &= ~(1 << 5); //Clear bit 6
-				encoded.push_back(newB1);
+			newB1 &= ~(1 << 5); //Clear bit 6
+			encoded.push_back(newB1);
 
-				encoded.push_back(newB2);
-			}
-			
-			
-			/*if( origFileLength % 2 == 1 ) {
-				cout<<"2"<<endl;;
-				int oldB1 = encoded.back();
-				int newB1 = 0xC0;
-				int newB2 = 0x80;
-				encoded.pop_back();
-				
-				newB1 |= (oldB1 & 0xF0) >> 4;
-				newB2 |= (oldB1 & 0x0F);
-
-				printf("%.2X\n",oldB1&0xFF);
-				printf("%.2X\n",newB1&0xFF);
-				printf("%.2X\n",newB2&0xFF);
-
-				encoded.push_back(newB1);
-				encoded.push_back(newB2);
-			}*/
+			encoded.push_back(newB2);
 		}
 
 		list<char>::iterator beg = encoded.begin();
